@@ -1,0 +1,455 @@
+---
+title: "Aviation Accident Database & Synopses"
+
+output: 
+  html_document: 
+    fig_height: 7
+    fig_width: 10
+    theme: journal
+    toc: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+	echo = TRUE,
+	message = FALSE,
+	warning = FALSE
+)
+```
+
+# Reading Data
+```{r}
+library(data.table)
+library(ggplot2)
+library(lubridate)
+# library(ggmap)
+aviation <- fread("C:/Users/saatc/Downloads/aviation-accident-database-synopses/AviationDataEnd2016UP.csv",stringsAsFactors = T)
+```
+
+# Cleaning and formatting Data
+```{r}
+# Removing columns that we are not going to use
+aviation$Event.Id <- NULL
+aviation$Accident.Number <- NULL
+aviation$Location <- NULL
+
+#Date formatting
+aviation$date <- ymd(aviation$Event.Date)
+aviation$year <- year(aviation$date)
+aviation$month <- month(aviation$date,label = T)
+aviation$day <- day(aviation$date)
+aviation$weekday <- wday(aviation$date,label = T)
+```
+
+# Summary
+```{r}
+summary(aviation)
+```
+
+# Accidents by time{.tabset}
+
+## Accidents by year and month
+```{r}
+ggplot(aviation[year>1981,.N,by=.(month,year)],aes(x = month,y=N,fill=N))+
+  geom_bar(stat = "identity")+
+  facet_wrap(~year)+
+  labs(title="Accidents by year and month")+ylab(NULL)
+```
+
+## Accidents by year
+```{r}
+ggplot(aviation[year>1981,.N,by=.(year)],aes(x = year,y=N,fill=N))+
+  geom_bar(stat = "identity")+
+  labs(title="Accidents by year")+ylab(NULL)
+```
+
+We see here a constant decrease of the Aviation accidents
+
+## Accidents by month
+```{r}
+ggplot(aviation[year>1981,.N,by=.(month)],aes(x = month,y=N,fill=N))+
+  geom_bar(stat = "identity")+
+  labs(title="Accidents by month")+ylab(NULL)
+```
+
+The most accidents are in summer, not surprising because is the time of the year with most flights.
+
+## Accidents by day
+```{r}
+ggplot(aviation[year>1981,.N,by=.(day)],aes(x = day,y=N,fill=N))+
+  geom_bar(stat = "identity")+
+  labs(title="Accidents by day")+ylab(NULL)
+```
+
+Here we don't see a significative difference by day of the month.
+
+## Accidents by weekday
+```{r}
+ggplot(aviation[year>1981,.N,by=.(weekday)],aes(x = weekday,y=N,fill=N))+
+  geom_bar(stat = "identity")+
+  labs(title="Accidents by weekday")+ylab(NULL)
+```
+
+Saturday and sunday are the most problematic days.
+
+# Aircraft Categories
+```{r}
+# Removing NA 
+ggplot(aviation[!Aircraft.Category%in%c("")],aes(x = Aircraft.Category))+
+  stat_count(aes(fill=Aircraft.Category))+
+  labs(title="Aircraft Categories")+ylab(NULL)
+
+aviation[!Aircraft.Category%in%c(""),.N,by=Aircraft.Category][order(-N)]
+```
+
+# Injuries by Broad Phase of Flight{.tabset}
+
+These are raw data, to better compare the injuries by Category we need the data of the total passengers in the flight, but we dont have that information here.
+
+
+## Mean Fatal Injuries
+```{r}
+p <- aviation[,.("Mean"=mean(Total.Fatal.Injuries,na.rm = T)),by=Broad.Phase.of.Flight][order(-Mean)]
+p
+```
+
+## Mean Serious Injuries
+```{r}
+p <- aviation[,.("Mean"=mean(Total.Serious.Injuries,na.rm = T)),by=Broad.Phase.of.Flight][order(-Mean)]
+p
+```
+
+
+## Mean Minor Injuries
+```{r}
+p <- aviation[,.("Mean"=mean(Total.Minor.Injuries,na.rm = T)),by=Broad.Phase.of.Flight][order(-Mean)]
+p
+```
+
+
+## Mean Uninjured.
+```{r}
+p <- aviation[,.("Mean"=mean(Total.Uninjured,na.rm = T)),by=Broad.Phase.of.Flight][order(-Mean)]
+p
+```
+
+
+# Injuries by Aircraft Category{.tabset}
+
+These are raw data, to better compare the injuries by Category we need the data of the total passengers in the flight, but we dont have that information here.
+
+```{r, include=FALSE}
+blank_theme <- theme_minimal()+
+  theme(
+  axis.title.x = element_blank(),
+  axis.title.y = element_blank(),
+  panel.border = element_blank(),
+  panel.grid=element_blank(),
+  axis.ticks = element_blank(),
+  plot.title=element_text(size=14, face="bold")
+  )
+library(scales)
+```
+
+## Mean Fatal Injuries
+```{r}
+p <- aviation[!Aircraft.Category%in%c(""),.("Mean"=mean(Total.Fatal.Injuries,na.rm = T)),by=Aircraft.Category][order(-Mean)]
+p
+```
+
+```{r, echo=FALSE}
+bp<- ggplot(p, aes(x="", y=Mean, fill=Aircraft.Category))+
+geom_bar(width = 1, stat = "identity")
+pie <- bp + coord_polar("y", start=0)
+pie  + blank_theme +
+  theme(axis.text.x=element_blank())+
+  geom_text(aes(y = Mean/3 + c(0, cumsum(Mean)[-length(Mean)]), 
+                label = percent(Mean/100)), size=5)+
+  labs(title=" Mean Fatal Injuries",subtitle="By Aircraft Category")
+```
+
+## Mean Serious Injuries
+```{r}
+p <- aviation[!Aircraft.Category%in%c(""),.("Mean"=mean(Total.Serious.Injuries,na.rm = T)),by=Aircraft.Category][order(-Mean)]
+p
+```
+
+```{r, echo=FALSE}
+bp<- ggplot(p, aes(x="", y=Mean, fill=Aircraft.Category))+
+geom_bar(width = 1, stat = "identity")
+pie <- bp + coord_polar("y", start=0)
+pie  + blank_theme +
+  theme(axis.text.x=element_blank())+
+  geom_text(aes(y = Mean/3 + c(0, cumsum(Mean)[-length(Mean)]), 
+                label = percent(Mean/100)), size=5)+
+  labs(title=" Mean Serious Injuries",subtitle="By Aircraft Category")
+```
+
+## Mean Minor Injuries
+```{r}
+p <- aviation[!Aircraft.Category%in%c(""),.("Mean"=mean(Total.Minor.Injuries,na.rm = T)),by=Aircraft.Category][order(-Mean)]
+p
+```
+
+```{r, echo=FALSE}
+bp<- ggplot(p, aes(x="", y=Mean, fill=Aircraft.Category))+
+geom_bar(width = 1, stat = "identity")
+pie <- bp + coord_polar("y", start=0)
+pie  + blank_theme +
+  theme(axis.text.x=element_blank())+
+  geom_text(aes(y = Mean/3 + c(0, cumsum(Mean)[-length(Mean)]), 
+                label = percent(Mean/100)), size=5)+
+  labs(title=" Mean Minor Injuries",subtitle="By Aircraft Category")
+```
+
+## Mean Uninjured.
+```{r}
+p <- aviation[!Aircraft.Category%in%c(""),.("Mean"=mean(Total.Uninjured,na.rm = T)),by=Aircraft.Category][order(-Mean)]
+p
+```
+
+```{r, echo=FALSE}
+bp<- ggplot(p, aes(x="", y=Mean, fill=Aircraft.Category))+
+geom_bar(width = 1, stat = "identity")
+pie <- bp + coord_polar("y", start=0)
+pie  + blank_theme +
+  theme(axis.text.x=element_blank())+
+  geom_text(aes(y = Mean/3 + c(0, cumsum(Mean)[-length(Mean)]), 
+                label = percent(Mean/100)), size=5)+
+  labs(title=" Mean Uninjured",subtitle="By Aircraft Category")
+```
+
+
+# Injuries by Weather Condition{.tabset}
+
+These are raw data, to better compare the injuries by Category we need the data of the total passengers in the flight, but we dont have that information here.
+
+```{r, include=FALSE}
+blank_theme <- theme_minimal()+
+  theme(
+  axis.title.x = element_blank(),
+  axis.title.y = element_blank(),
+  panel.border = element_blank(),
+  panel.grid=element_blank(),
+  axis.ticks = element_blank(),
+  plot.title=element_text(size=14, face="bold")
+  )
+library(scales)
+```
+
+## Mean Fatal Injuries
+```{r}
+p <- aviation[!Weather.Condition%in%c(""),.("Mean"=mean(Total.Fatal.Injuries,na.rm = T)),by=Weather.Condition][order(-Mean)]
+p
+```
+
+```{r, echo=FALSE}
+bp<- ggplot(p, aes(x="", y=Mean, fill=Weather.Condition))+
+geom_bar(width = 1, stat = "identity")
+pie <- bp + coord_polar("y", start=0)
+pie  + blank_theme +
+  theme(axis.text.x=element_blank())+
+  geom_text(aes(y = Mean/3 + c(0, cumsum(Mean)[-length(Mean)]), 
+                label = percent(Mean/100)), size=5)+
+  labs(title=" Mean Fatal Injuries",subtitle="By Weather Condition")
+```
+
+## Mean Serious Injuries
+```{r}
+p <- aviation[!Weather.Condition%in%c(""),.("Mean"=mean(Total.Serious.Injuries,na.rm = T)),by=Weather.Condition][order(-Mean)]
+p
+```
+
+```{r, echo=FALSE}
+bp<- ggplot(p, aes(x="", y=Mean, fill=Weather.Condition))+
+geom_bar(width = 1, stat = "identity")
+pie <- bp + coord_polar("y", start=0)
+pie  + blank_theme +
+  theme(axis.text.x=element_blank())+
+  geom_text(aes(y = Mean/3 + c(0, cumsum(Mean)[-length(Mean)]), 
+                label = percent(Mean/100)), size=5)+
+  labs(title=" Mean Serious Injuries",subtitle="By Weather Condition")
+```
+
+## Mean Minor Injuries
+```{r}
+p <- aviation[!Weather.Condition%in%c(""),.("Mean"=mean(Total.Minor.Injuries,na.rm = T)),by=Weather.Condition][order(-Mean)]
+p
+```
+
+```{r, echo=FALSE}
+bp<- ggplot(p, aes(x="", y=Mean, fill=Weather.Condition))+
+geom_bar(width = 1, stat = "identity")
+pie <- bp + coord_polar("y", start=0)
+pie  + blank_theme +
+  theme(axis.text.x=element_blank())+
+  geom_text(aes(y = Mean/3 + c(0, cumsum(Mean)[-length(Mean)]), 
+                label = percent(Mean/100)), size=5)+
+  labs(title=" Mean Minor Injuries",subtitle="By Weather Condition")
+```
+
+## Mean Uninjured.
+```{r}
+p <- aviation[!Weather.Condition%in%c(""),.("Mean"=mean(Total.Uninjured,na.rm = T)),by=Weather.Condition][order(-Mean)]
+p
+```
+
+```{r, echo=FALSE}
+bp<- ggplot(p, aes(x="", y=Mean, fill=Weather.Condition))+
+geom_bar(width = 1, stat = "identity")
+pie <- bp + coord_polar("y", start=0)
+pie  + blank_theme +
+  theme(axis.text.x=element_blank())+
+  geom_text(aes(y = Mean/3 + c(0, cumsum(Mean)[-length(Mean)]), 
+                label = percent(Mean/100)), size=5)+
+  labs(title=" Mean Uninjured",subtitle="By Weather Condition")
+```
+
+
+# Accidents by Engine Type
+```{r}
+ggplot(aviation[year>1981,.N,by=.(Engine.Type)][N>5],aes(x = Engine.Type,y=N,fill=N))+
+  geom_bar(stat = "identity")+
+  labs(title="Accidents by Engine Type")+ylab(NULL)
+```
+
+
+# Accidents by Aircraft Damage
+```{r}
+ggplot(aviation[!Aircraft.Damage%in%c(""),.N,by=.(Aircraft.Damage)][N>5],aes(x = Aircraft.Damage,y=N,fill=N))+
+  geom_bar(stat = "identity")+
+  labs(title="Accidents by Engine Type")+ylab(NULL)
+```
+
+
+
+
+
+## Accidents in Europe{.tabset}
+
+### All Accidents
+```{r, eval=FALSE, include=TRUE}
+map<-get_map(location="Europe",zoom=3)
+ggmap(map)+
+  geom_point(aes(x=Longitude,y=Latitude,colour=Aircraft.Category),
+             data=aviation)+
+  labs(title="Accidents by Aircraft Categorie")+ylab(NULL)+xlab(NULL)
+```
+
+![](http://imgur.com/d6oWNCx.png)
+
+### Aircraft Accidents
+```{r, eval=FALSE, include=TRUE}
+map<-get_map(location="Europe",zoom=3)
+ggmap(map)+
+  geom_point(data=aviation[Aircraft.Category%in%c("Airplane")],aes(x=Longitude,y=Latitude),alpha=0.5,col="red")+
+  labs(title="Aircraft Accidents")+ylab(NULL)+xlab(NULL)
+```
+
+![](http://imgur.com/uQGjlOG.png)
+
+### Helicopter Accidents
+```{r, eval=FALSE, include=TRUE}
+map<-get_map(location="Europe",zoom=3)
+ggmap(map)+
+  geom_point(data=aviation[Aircraft.Category%in%c("Helicopter")],aes(x=Longitude,y=Latitude),alpha=0.5,col="red")+
+  labs(title="Helicopter Accidents")+ylab(NULL)+xlab(NULL)
+```
+
+![](http://imgur.com/vnluDN3.png)
+
+### Not Airplane or Helicopter
+```{r, eval=FALSE, include=TRUE}
+map<-get_map(location="Europe",zoom=3)
+ggmap(map)+
+  geom_point(data=aviation[!Aircraft.Category%in%c("","Helicopter","Airplane")],aes(x=Longitude,y=Latitude,colour=Aircraft.Category))+
+  labs(title="Other Accidents")+ylab(NULL)+xlab(NULL)
+```
+
+![](http://imgur.com/sumbAgW.png)
+
+## Accidents in Asia{.tabset}
+
+### All Accidents
+```{r, eval=FALSE, include=TRUE}
+map<-get_map(location="Asia",zoom=3)
+ggmap(map)+
+  geom_point(aes(x=Longitude,y=Latitude,colour=Aircraft.Category),
+             data=aviation)+
+  labs(title="Accidents by Aircraft Categorie")+ylab(NULL)+xlab(NULL)
+```
+
+![](http://imgur.com/y7awTxe.png)
+
+### Aircraft Accidents
+```{r, eval=FALSE, include=TRUE}
+map<-get_map(location="Asia",zoom=3)
+ggmap(map)+
+  geom_point(data=aviation[Aircraft.Category%in%c("Airplane")],aes(x=Longitude,y=Latitude),alpha=0.5,col="red")+
+  labs(title="Aircraft Accidents")+ylab(NULL)+xlab(NULL)
+```
+
+![](http://imgur.com/Lfh3TLv.png)
+
+### Helicopter Accidents
+```{r, eval=FALSE, include=TRUE}
+map<-get_map(location="Asia",zoom=3)
+ggmap(map)+
+  geom_point(data=aviation[Aircraft.Category%in%c("Helicopter")],aes(x=Longitude,y=Latitude),alpha=0.5,col="red")+
+  labs(title="Helicopter Accidents")+ylab(NULL)+xlab(NULL)
+```
+
+![](http://imgur.com/CyaOEgA.png)
+
+### Not Airplane or Helicopter
+```{r, eval=FALSE, include=TRUE}
+map<-get_map(location="Asia",zoom=3)
+ggmap(map)+
+  geom_point(data=aviation[!Aircraft.Category%in%c("","Helicopter","Airplane")],aes(x=Longitude,y=Latitude,colour=Aircraft.Category))+
+  labs(title="Other Accidents")+ylab(NULL)+xlab(NULL)
+```
+
+![](http://imgur.com/t5tjAGV.png)
+
+## Accidents in Africa{.tabset}
+
+### All Accidents
+```{r, eval=FALSE, include=TRUE}
+map<-get_map(location="Africa",zoom=3)
+ggmap(map)+
+  geom_point(aes(x=Longitude,y=Latitude,colour=Aircraft.Category),
+             data=aviation)+
+  labs(title="Accidents by Aircraft Categorie")+ylab(NULL)+xlab(NULL)
+```
+
+![](http://imgur.com/aBW1fj3.png)
+
+### Aircraft Accidents
+```{r, eval=FALSE, include=TRUE}
+map<-get_map(location="Africa",zoom=3)
+ggmap(map)+
+  geom_point(data=aviation[Aircraft.Category%in%c("Airplane")],aes(x=Longitude,y=Latitude),alpha=0.5,col="red")+
+  labs(title="Aircraft Accidents")+ylab(NULL)+xlab(NULL)
+```
+
+![](http://imgur.com/VbwbJ9o.png)
+
+### Helicopter Accidents
+```{r, eval=FALSE, include=TRUE}
+map<-get_map(location="Africa",zoom=3)
+ggmap(map)+
+  geom_point(data=aviation[Aircraft.Category%in%c("Helicopter")],aes(x=Longitude,y=Latitude),alpha=0.5,col="red")+
+  labs(title="Helicopter Accidents")+ylab(NULL)+xlab(NULL)
+```
+
+![](http://imgur.com/cnAwTFg.png)
+
+### Not Airplane or Helicopter
+```{r, eval=FALSE, include=TRUE}
+map<-get_map(location="Africa",zoom=3)
+ggmap(map)+
+  geom_point(data=aviation[!Aircraft.Category%in%c("","Helicopter","Airplane")],aes(x=Longitude,y=Latitude,colour=Aircraft.Category))+
+  labs(title="Other Accidents")+ylab(NULL)+xlab(NULL)
+```
+
+![](http://imgur.com/8jRvTL9.png)
